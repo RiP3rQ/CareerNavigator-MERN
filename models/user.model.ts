@@ -7,7 +7,7 @@ const emailRegexPattern: RegExp = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export interface IUser extends Document {
   firstName: string;
-  secondName: string;
+  lastName: string;
   email: string;
   password: string;
   avatar: {
@@ -22,6 +22,8 @@ export interface IUser extends Document {
     status: string;
   }[];
 
+  // TODO: Add JobSeeker Info with a new interface (JobSeekerInfo - education, experience, skills, CV, etc.)
+
   comparePassword: (password: string) => Promise<boolean>;
   SignAccessToken: () => string;
   SignRefreshToken: () => string;
@@ -33,7 +35,7 @@ const userSchema: Schema<IUser> = new mongoose.Schema(
       type: String,
       required: [true, "Please enter your name"],
     },
-    secondName: {
+    lastName: {
       type: String,
       required: [true, "Please enter your surname"],
     },

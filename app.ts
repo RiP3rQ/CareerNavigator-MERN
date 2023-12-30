@@ -2,6 +2,7 @@ import express, { NextFunction, Request, Response } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { ErrorMiddleware } from "./middleware/error";
+import userRouter from "./routes/user.route";
 require("dotenv").config();
 
 // App init
@@ -24,10 +25,7 @@ app.use(
 //// ROUTES -----------------------------------------------------------
 
 // all routes
-// app.use(
-//   "/api/v1",
-//   userRouter,
-// );
+app.use("/api/v1", userRouter);
 
 // unknown route
 app.all("*", (req: Request, res: Response, next: NextFunction) => {
