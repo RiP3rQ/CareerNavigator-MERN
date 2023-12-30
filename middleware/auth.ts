@@ -43,22 +43,22 @@ export const isAuthenticated = CatchAsyncError(
     }
 
     // if exists parse REDIS user data to req.user
-    // req.user = JSON.parse(user);
+    req.user = JSON.parse(user);
 
     next();
   }
 );
 
 // ------------------------------------------------------------------------ Validate user role
-// export const authorizeRoles = (...roles: string[]) => {
-//   return (req: Request, res: Response, next: NextFunction) => {
-//     if (!roles.includes((req.user?.role as string) || ""))
-//       return next(
-//         new ErrorHandler(
-//           `User role ${req.user?.role} is not allowed to access this resource`,
-//           403
-//         )
-//       );
-//     next();
-//   };
-// };
+export const authorizeRoles = (...roles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!roles.includes((req.user?.role as string) || ""))
+      return next(
+        new ErrorHandler(
+          `User role ${req.user?.role} is not allowed to access this resource`,
+          403
+        )
+      );
+    next();
+  };
+};
