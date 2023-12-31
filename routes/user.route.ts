@@ -13,7 +13,6 @@ import {
   updateUserRole,
   deleteUser,
   updateUserAdditionalInfo,
-  editUserAdditionalInfo,
   deleteSectionUserProfileAdditionalInfo,
 } from "../controllers/user.controller";
 import express from "express";
@@ -40,11 +39,6 @@ userRouter.put(
   "/update-user-additional-info",
   isAuthenticated,
   updateUserAdditionalInfo
-);
-userRouter.put(
-  "/edit-user-additional-info",
-  isAuthenticated,
-  editUserAdditionalInfo
 );
 
 // ------------------------------------ DELETE Routes ------------------------------------

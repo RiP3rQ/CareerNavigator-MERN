@@ -280,8 +280,6 @@ export const getUserInfo = CatchAsyncError(
     try {
       const userId = req.user?._id as string;
 
-      console.log(userId);
-
       getUserByIdFromRedisService(userId, res);
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 400));
@@ -332,6 +330,10 @@ interface IUpdateUserProfileRequest {
   firstName?: string;
   lastName?: string;
   email?: string;
+  bio?: string;
+  website?: string;
+  linkedIn?: string;
+  github?: string;
 }
 
 export const updateUserProfile = CatchAsyncError(
@@ -339,7 +341,7 @@ export const updateUserProfile = CatchAsyncError(
     try {
       const userId = req.user?._id;
 
-      const { firstName, lastName, email } =
+      const { firstName, lastName, email, bio, website, linkedIn, github } =
         req.body as IUpdateUserProfileRequest;
 
       const user = await UserModel.findById(userId);
@@ -347,9 +349,6 @@ export const updateUserProfile = CatchAsyncError(
       if (!user) return next(new ErrorHandler("User not found", 404));
 
       if (email && user) {
-        const isEmailExist = await UserModel.findOne({ email });
-        if (isEmailExist)
-          return next(new ErrorHandler("Email already exists", 400));
         user.email = email;
       }
 
@@ -359,6 +358,22 @@ export const updateUserProfile = CatchAsyncError(
 
       if (lastName && user) {
         user.lastName = lastName;
+      }
+
+      if (bio && user) {
+        user.bio = bio;
+      }
+
+      if (website && user) {
+        user.social.website = website;
+      }
+
+      if (linkedIn && user) {
+        user.social.linkedIn = linkedIn;
+      }
+
+      if (github && user) {
+        user.social.github = github;
       }
 
       await user?.save();
@@ -451,6 +466,8 @@ export const updateUserAvatar = CatchAsyncError(
       const userId = req.user?._id;
       const user = await UserModel.findById(userId);
 
+      console.log("Updating avatar");
+
       if (!user) return next(new ErrorHandler("User not found", 404));
 
       if (!avatar) return next(new ErrorHandler("No image selected", 400));
@@ -506,13 +523,7 @@ interface IUpdateUserProfileAdditionalInfoRequest {
   education?: IEducation[];
   experience?: IExperience[];
   skills?: string[];
-  bio?: string;
   CV?: string;
-  social?: {
-    website: string;
-    linkedIn: string;
-    github: string;
-  };
 }
 export const updateUserAdditionalInfo = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -521,7 +532,7 @@ export const updateUserAdditionalInfo = CatchAsyncError(
       const userId = req.user?._id;
 
       // Get data from request body
-      const { education, experience, skills, bio, CV, social } =
+      const { education, experience, skills, CV } =
         req.body as IUpdateUserProfileAdditionalInfoRequest;
 
       // Check if user exists
@@ -532,7 +543,7 @@ export const updateUserAdditionalInfo = CatchAsyncError(
       if (user._id.toString() !== userId.toString())
         return next(new ErrorHandler("Unauthorized", 401));
 
-      // Update user if education or experience or skills or bio or CV or social is provided
+      // Update user if education or experience or skills or CV is provided
       if (education && user) {
         user.education = education;
       }
@@ -543,10 +554,6 @@ export const updateUserAdditionalInfo = CatchAsyncError(
 
       if (skills && user) {
         user.skills = skills;
-      }
-
-      if (bio && user) {
-        user.bio = bio;
       }
 
       if (CV && user) {
@@ -570,107 +577,6 @@ export const updateUserAdditionalInfo = CatchAsyncError(
             url: myCloud.secure_url,
           };
         }
-      }
-
-      if (social && user) {
-        user.social = social;
-      }
-
-      await user.save();
-
-      // delete password from user object
-      if (user?.password) {
-        user.password = "";
-      }
-
-      // Update user in redis cache
-      await redis.set(userId, JSON.stringify(user));
-
-      res.status(201).json({
-        success: true,
-        message: "User updated successfully",
-        user,
-      });
-    } catch (error: any) {
-      return next(new ErrorHandler(error.message, 400));
-    }
-  }
-);
-
-// ------------------------------------------------------------------------ Edit User Profile Additional Info
-interface IEditUserProfileAdditionalInfoRequest {
-  education?: IEducation[];
-  experience?: IExperience[];
-  skills?: string[];
-  bio?: string;
-  CV?: string;
-  social?: {
-    website: string;
-    linkedIn: string;
-    github: string;
-  };
-}
-
-export const editUserAdditionalInfo = CatchAsyncError(
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      // Get user id
-      const userId = req.user?._id;
-
-      // Get data from request body
-      const { education, experience, skills, bio, CV, social } =
-        req.body as IEditUserProfileAdditionalInfoRequest;
-
-      // Check if user exists
-      const user = await UserModel.findById(userId);
-      if (!user) return next(new ErrorHandler("User not found", 404));
-
-      // Check if user is updating his own profile
-      if (user._id.toString() !== userId.toString())
-        return next(new ErrorHandler("Unauthorized", 401));
-
-      // Update user if education or experience or skills or bio or CV or social is provided
-      if (education && user) {
-        user.education = education;
-      }
-
-      if (experience && user) {
-        user.experience = experience;
-      }
-
-      if (skills && user) {
-        user.skills = skills;
-      }
-
-      if (bio && user) {
-        user.bio = bio;
-      }
-
-      if (CV && user) {
-        if (user?.CV?.public_id) {
-          // first delete the previous CV
-          await cloudinary.v2.uploader.destroy(user?.CV?.public_id);
-          // then upload new CV
-          const myCloud = await cloudinary.v2.uploader.upload(CV, {
-            folder: "User_CVs",
-          });
-          user.CV = {
-            public_id: myCloud.public_id,
-            url: myCloud.secure_url,
-          };
-        } else {
-          const myCloud = await cloudinary.v2.uploader.upload(CV, {
-            folder: "User_CVs",
-          });
-          user.CV = {
-            public_id: myCloud.public_id,
-            url: myCloud.secure_url,
-          };
-        }
-      }
-
-      if (social && user) {
-        user.social = social;
       }
 
       await user.save();
