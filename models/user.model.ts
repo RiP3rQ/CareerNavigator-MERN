@@ -5,6 +5,26 @@ import jwt from "jsonwebtoken";
 
 const emailRegexPattern: RegExp = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+export interface IEducation extends Document {
+  school: string;
+  degree: string;
+  fieldOfStudy: string;
+  from: Date;
+  to: Date;
+  current: boolean;
+  description: string;
+}
+
+export interface IExperience extends Document {
+  title: string;
+  company: string;
+  location: string;
+  from: Date;
+  to: Date;
+  current: boolean;
+  description: string;
+}
+
 export interface IUser extends Document {
   firstName: string;
   lastName: string;
@@ -21,9 +41,22 @@ export interface IUser extends Document {
     jobOfferId: string;
     status: string;
   }[];
+  // ------- Aditional Info -------
+  education: IEducation[];
+  experience: IExperience[];
+  skills: string[];
+  bio: string;
+  CV: {
+    public_id: string;
+    url: string;
+  };
+  social: {
+    website: string;
+    linkedIn: string;
+    github: string;
+  };
 
-  // TODO: Add JobSeeker Info with a new interface (JobSeekerInfo - education, experience, skills, CV, etc.)
-
+  // ------- Methods -------
   comparePassword: (password: string) => Promise<boolean>;
   SignAccessToken: () => string;
   SignRefreshToken: () => string;
@@ -88,6 +121,82 @@ const userSchema: Schema<IUser> = new mongoose.Schema(
         },
       },
     ],
+    // ------- Aditional Info -------
+    education: [
+      {
+        school: {
+          type: String,
+        },
+        degree: {
+          type: String,
+        },
+        fieldOfStudy: {
+          type: String,
+        },
+        from: {
+          type: Date,
+        },
+        to: {
+          type: Date,
+        },
+        current: {
+          type: Boolean,
+          default: false,
+        },
+        description: {
+          type: String,
+        },
+      },
+    ],
+    experience: [
+      {
+        title: {
+          type: String,
+        },
+        company: {
+          type: String,
+        },
+        location: {
+          type: String,
+        },
+        from: {
+          type: Date,
+        },
+        to: {
+          type: Date,
+        },
+        current: {
+          type: Boolean,
+          default: false,
+        },
+        description: {
+          type: String,
+        },
+      },
+    ],
+    skills: [
+      {
+        type: String,
+      },
+    ],
+    bio: {
+      type: String,
+    },
+    CV: {
+      public_id: String,
+      url: String,
+    },
+    social: {
+      website: {
+        type: String,
+      },
+      linkedIn: {
+        type: String,
+      },
+      github: {
+        type: String,
+      },
+    },
   },
   { timestamps: true }
 );

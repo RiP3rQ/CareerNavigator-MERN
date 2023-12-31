@@ -1,5 +1,9 @@
 import { Request, Response, NextFunction } from "express";
-import UserModel, { IUser } from "../models/user.model";
+import UserModel, {
+  IEducation,
+  IExperience,
+  IUser,
+} from "../models/user.model";
 import ErrorHandler from "../utils/errorHandler";
 import { CatchAsyncError } from "../middleware/catchAsyncError";
 import jwt, { JwtPayload, Secret } from "jsonwebtoken";
@@ -89,7 +93,7 @@ export const createActivationToken = (
     { user, activationCode },
     process.env.ACTIVATION_SECRET as Secret,
     {
-      expiresIn: "5min",
+      expiresIn: "5h",
     }
   );
   return { token, activationCode };
@@ -323,7 +327,7 @@ export const socialAuth = CatchAsyncError(
   }
 );
 
-// ------------------------------------------------------------------------ Update User Profile
+// ------------------------------------------------------------------------ Update Basic User Profile Info
 interface IUpdateUserProfileRequest {
   firstName?: string;
   lastName?: string;
@@ -497,7 +501,200 @@ export const updateUserAvatar = CatchAsyncError(
   }
 );
 
-// ------------------------------------------------------------------------ Get All Users only for admin
+// ------------------------------------------------------------------------ Update User Profile Additional Info
+interface IUpdateUserProfileAdditionalInfoRequest {
+  education?: IEducation[];
+  experience?: IExperience[];
+  skills?: string[];
+  bio?: string;
+  CV?: string;
+  social?: {
+    website: string;
+    linkedIn: string;
+    github: string;
+  };
+}
+export const updateUserAdditionalInfo = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Get user id
+      const userId = req.user?._id;
+
+      // Get data from request body
+      const { education, experience, skills, bio, CV, social } =
+        req.body as IUpdateUserProfileAdditionalInfoRequest;
+
+      // Check if user exists
+      const user = await UserModel.findById(userId);
+      if (!user) return next(new ErrorHandler("User not found", 404));
+
+      // Check if user is updating his own profile
+      if (user._id.toString() !== userId.toString())
+        return next(new ErrorHandler("Unauthorized", 401));
+
+      // Update user if education or experience or skills or bio or CV or social is provided
+      if (education && user) {
+        user.education = education;
+      }
+
+      if (experience && user) {
+        user.experience = experience;
+      }
+
+      if (skills && user) {
+        user.skills = skills;
+      }
+
+      if (bio && user) {
+        user.bio = bio;
+      }
+
+      if (CV && user) {
+        if (user?.CV?.public_id) {
+          // first delete the previous CV
+          await cloudinary.v2.uploader.destroy(user?.CV?.public_id);
+          // then upload new CV
+          const myCloud = await cloudinary.v2.uploader.upload(CV, {
+            folder: "User_CVs",
+          });
+          user.CV = {
+            public_id: myCloud.public_id,
+            url: myCloud.secure_url,
+          };
+        } else {
+          const myCloud = await cloudinary.v2.uploader.upload(CV, {
+            folder: "User_CVs",
+          });
+          user.CV = {
+            public_id: myCloud.public_id,
+            url: myCloud.secure_url,
+          };
+        }
+      }
+
+      if (social && user) {
+        user.social = social;
+      }
+
+      await user.save();
+
+      // delete password from user object
+      if (user?.password) {
+        user.password = "";
+      }
+
+      // Update user in redis cache
+      await redis.set(userId, JSON.stringify(user));
+
+      res.status(201).json({
+        success: true,
+        message: "User updated successfully",
+        user,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
+
+// ------------------------------------------------------------------------ Edit User Profile Additional Info
+interface IEditUserProfileAdditionalInfoRequest {
+  education?: IEducation[];
+  experience?: IExperience[];
+  skills?: string[];
+  bio?: string;
+  CV?: string;
+  social?: {
+    website: string;
+    linkedIn: string;
+    github: string;
+  };
+}
+
+export const editUserAdditionalInfo = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Get user id
+      const userId = req.user?._id;
+
+      // Get data from request body
+      const { education, experience, skills, bio, CV, social } =
+        req.body as IEditUserProfileAdditionalInfoRequest;
+
+      // Check if user exists
+      const user = await UserModel.findById(userId);
+      if (!user) return next(new ErrorHandler("User not found", 404));
+
+      // Check if user is updating his own profile
+      if (user._id.toString() !== userId.toString())
+        return next(new ErrorHandler("Unauthorized", 401));
+
+      // Update user if education or experience or skills or bio or CV or social is provided
+      if (education && user) {
+        user.education = education;
+      }
+
+      if (experience && user) {
+        user.experience = experience;
+      }
+
+      if (skills && user) {
+        user.skills = skills;
+      }
+
+      if (bio && user) {
+        user.bio = bio;
+      }
+
+      if (CV && user) {
+        if (user?.CV?.public_id) {
+          // first delete the previous CV
+          await cloudinary.v2.uploader.destroy(user?.CV?.public_id);
+          // then upload new CV
+          const myCloud = await cloudinary.v2.uploader.upload(CV, {
+            folder: "User_CVs",
+          });
+          user.CV = {
+            public_id: myCloud.public_id,
+            url: myCloud.secure_url,
+          };
+        } else {
+          const myCloud = await cloudinary.v2.uploader.upload(CV, {
+            folder: "User_CVs",
+          });
+          user.CV = {
+            public_id: myCloud.public_id,
+            url: myCloud.secure_url,
+          };
+        }
+      }
+
+      if (social && user) {
+        user.social = social;
+      }
+
+      await user.save();
+
+      // delete password from user object
+      if (user?.password) {
+        user.password = "";
+      }
+
+      // Update user in redis cache
+      await redis.set(userId, JSON.stringify(user));
+
+      res.status(201).json({
+        success: true,
+        message: "User updated successfully",
+        user,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
+
+// ------------------------------------------------------------------------ Get All Users | -- only for admin
 export const getAllUsers = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -508,7 +705,7 @@ export const getAllUsers = CatchAsyncError(
   }
 );
 
-// ------------------------------------------------------------------------ Update User Role only for admin
+// ------------------------------------------------------------------------ Update User Role  | -- only for admin
 export const updateUserRole = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -520,7 +717,7 @@ export const updateUserRole = CatchAsyncError(
   }
 );
 
-// ------------------------------------------------------------------------ Delete User only for admin
+// ------------------------------------------------------------------------ Delete User | -- only for admin
 export const deleteUser = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {

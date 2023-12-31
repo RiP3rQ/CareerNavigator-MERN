@@ -12,31 +12,39 @@ import {
   getAllUsers,
   updateUserRole,
   deleteUser,
+  updateUserAdditionalInfo,
+  editUserAdditionalInfo,
 } from "../controllers/user.controller";
 import express from "express";
 import { authorizeRoles, isAuthenticated } from "../middleware/auth";
 
 const userRouter = express.Router();
 
-userRouter.post("/registration", registrationUser);
-
-userRouter.post("/activate-user", activateUser);
-
-userRouter.post("/login-user", loginUser);
-
+// ------------------------------------ GET Routes ------------------------------------
 userRouter.get("/logout", isAuthenticated, logoutUser);
-
 userRouter.get("/refresh-token", updateAccessToken);
-
-userRouter.post("/social-auth", socialAuth);
-
 userRouter.get("/me", isAuthenticated, getUserInfo);
 
+// ------------------------------------ POST Routes ------------------------------------
+userRouter.post("/registration", registrationUser);
+userRouter.post("/activate-user", activateUser);
+userRouter.post("/login-user", loginUser);
+userRouter.post("/social-auth", socialAuth);
+
+// ------------------------------------ PUT Routes ------------------------------------
 userRouter.put("/update-me", isAuthenticated, updateUserProfile);
-
 userRouter.put("/update-user-password", isAuthenticated, updateUserPassword);
-
 userRouter.put("/update-user-avatar", isAuthenticated, updateUserAvatar);
+userRouter.put(
+  "/update-user-additional-info",
+  isAuthenticated,
+  updateUserAdditionalInfo
+);
+userRouter.put(
+  "/edit-user-additional-info",
+  isAuthenticated,
+  editUserAdditionalInfo
+);
 
 // ------------------------------------ Admin Routes ------------------------------------
 userRouter.get(
@@ -45,14 +53,12 @@ userRouter.get(
   authorizeRoles("admin"),
   getAllUsers
 );
-
 userRouter.put(
   "/update-user-role",
   isAuthenticated,
   authorizeRoles("admin"),
   updateUserRole
 );
-
 userRouter.delete(
   "/delete-user/:id",
   isAuthenticated,
