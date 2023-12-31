@@ -694,6 +694,84 @@ export const editUserAdditionalInfo = CatchAsyncError(
   }
 );
 
+// ------------------------------------------------------------------------ Delete Section from User Profile Additional Info
+interface IDeleteSectionUserProfileAdditionalInfoRequest {
+  section: string;
+}
+
+export const deleteSectionUserProfileAdditionalInfo = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // Get user id
+      const userId = req.user?._id;
+
+      // Get data from request body
+      const { section } =
+        req.body as IDeleteSectionUserProfileAdditionalInfoRequest;
+
+      // Check if user exists
+      const user = await UserModel.findById(userId);
+      if (!user) return next(new ErrorHandler("User not found", 404));
+
+      // Check if user is updating his own profile
+      if (user._id.toString() !== userId.toString())
+        return next(new ErrorHandler("Unauthorized", 401));
+
+      // Update user if education or experience or skills or bio or CV or social is provided
+      if (section === "education" && user) {
+        user.education = [];
+      }
+
+      if (section === "experience" && user) {
+        user.experience = [];
+      }
+
+      if (section === "skills" && user) {
+        user.skills = [];
+      }
+
+      if (section === "bio" && user) {
+        user.bio = "";
+      }
+
+      if (section === "CV" && user) {
+        if (user?.CV?.public_id) {
+          // first delete the previous CV
+          await cloudinary.v2.uploader.destroy(user?.CV?.public_id);
+          user.CV = {} as { public_id: string; url: string };
+        }
+      }
+
+      if (section === "social" && user) {
+        user.social = {
+          website: "",
+          linkedIn: "",
+          github: "",
+        };
+      }
+
+      // Delete section in user profile additional info
+      await user.save();
+
+      // delete password from user object
+      if (user?.password) {
+        user.password = "";
+      }
+
+      // Update user in redis cache
+      await redis.set(userId, JSON.stringify(user));
+
+      res.status(201).json({
+        success: true,
+        message: "Section deleted successfully",
+        user,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
+
 // ------------------------------------------------------------------------ Get All Users | -- only for admin
 export const getAllUsers = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {

@@ -14,6 +14,7 @@ import {
   deleteUser,
   updateUserAdditionalInfo,
   editUserAdditionalInfo,
+  deleteSectionUserProfileAdditionalInfo,
 } from "../controllers/user.controller";
 import express from "express";
 import { authorizeRoles, isAuthenticated } from "../middleware/auth";
@@ -44,6 +45,13 @@ userRouter.put(
   "/edit-user-additional-info",
   isAuthenticated,
   editUserAdditionalInfo
+);
+
+// ------------------------------------ DELETE Routes ------------------------------------
+userRouter.delete(
+  "/delete-section-in-profile",
+  isAuthenticated,
+  deleteSectionUserProfileAdditionalInfo
 );
 
 // ------------------------------------ Admin Routes ------------------------------------
