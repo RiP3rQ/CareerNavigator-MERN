@@ -466,8 +466,6 @@ export const updateUserAvatar = CatchAsyncError(
       const userId = req.user?._id;
       const user = await UserModel.findById(userId);
 
-      console.log("Updating avatar");
-
       if (!user) return next(new ErrorHandler("User not found", 404));
 
       if (!avatar) return next(new ErrorHandler("No image selected", 400));
@@ -520,9 +518,9 @@ export const updateUserAvatar = CatchAsyncError(
 
 // ------------------------------------------------------------------------ Update User Profile Additional Info
 interface IUpdateUserProfileAdditionalInfoRequest {
-  education?: IEducation[];
-  experience?: IExperience[];
-  skills?: string[];
+  education?: IEducation;
+  experience?: IExperience;
+  skills?: string;
   CV?: string;
 }
 export const updateUserAdditionalInfo = CatchAsyncError(
@@ -545,33 +543,37 @@ export const updateUserAdditionalInfo = CatchAsyncError(
 
       // Update user if education or experience or skills or CV is provided
       if (education && user) {
-        user.education = education;
+        user.education.push(education);
       }
 
       if (experience && user) {
-        user.experience = experience;
+        user.experience.push(experience);
       }
 
+      // add skill to user profile
       if (skills && user) {
-        user.skills = skills;
+        user.skills.push(skills);
       }
 
       if (CV && user) {
         if (user?.CV?.public_id) {
           // first delete the previous CV
           await cloudinary.v2.uploader.destroy(user?.CV?.public_id);
-          // then upload new CV
+          // then upload new CV pdf file
           const myCloud = await cloudinary.v2.uploader.upload(CV, {
             folder: "User_CVs",
           });
+
           user.CV = {
             public_id: myCloud.public_id,
             url: myCloud.secure_url,
           };
         } else {
+          // then upload new CV pdf file
           const myCloud = await cloudinary.v2.uploader.upload(CV, {
             folder: "User_CVs",
           });
+
           user.CV = {
             public_id: myCloud.public_id,
             url: myCloud.secure_url,
@@ -600,7 +602,7 @@ export const updateUserAdditionalInfo = CatchAsyncError(
   }
 );
 
-// ------------------------------------------------------------------------ Delete Section from User Profile Additional Info
+// ------------------------------------------------------------------------ Delete Section Element by id from User Profile Additional Info
 interface IDeleteSectionUserProfileAdditionalInfoRequest {
   section: string;
 }
@@ -615,6 +617,8 @@ export const deleteSectionUserProfileAdditionalInfo = CatchAsyncError(
       const { section } =
         req.body as IDeleteSectionUserProfileAdditionalInfoRequest;
 
+      const sectionId = req.params.id as string;
+
       // Check if user exists
       const user = await UserModel.findById(userId);
       if (!user) return next(new ErrorHandler("User not found", 404));
@@ -623,21 +627,21 @@ export const deleteSectionUserProfileAdditionalInfo = CatchAsyncError(
       if (user._id.toString() !== userId.toString())
         return next(new ErrorHandler("Unauthorized", 401));
 
-      // Update user if education or experience or skills or bio or CV or social is provided
-      if (section === "education" && user) {
-        user.education = [];
+      if (section === "education" && sectionId && user) {
+        user.education = user.education?.filter(
+          (edu) => edu._id.toString() !== sectionId.toString()
+        );
       }
 
-      if (section === "experience" && user) {
-        user.experience = [];
+      if (section === "experience" && sectionId && user) {
+        user.experience = user.experience?.filter(
+          (exp) => exp._id.toString() !== sectionId.toString()
+        );
       }
 
-      if (section === "skills" && user) {
-        user.skills = [];
-      }
-
-      if (section === "bio" && user) {
-        user.bio = "";
+      if (section === "skills" && sectionId && user) {
+        const indexOfSkill = parseInt(sectionId);
+        user.skills.splice(indexOfSkill, 1);
       }
 
       if (section === "CV" && user) {
@@ -669,7 +673,7 @@ export const deleteSectionUserProfileAdditionalInfo = CatchAsyncError(
 
       res.status(201).json({
         success: true,
-        message: "Section deleted successfully",
+        message: "Section element deleted successfully",
         user,
       });
     } catch (error: any) {

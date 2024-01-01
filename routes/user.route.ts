@@ -43,7 +43,7 @@ userRouter.put(
 
 // ------------------------------------ DELETE Routes ------------------------------------
 userRouter.delete(
-  "/delete-section-in-profile",
+  "/delete-section-in-profile/:id",
   isAuthenticated,
   deleteSectionUserProfileAdditionalInfo
 );

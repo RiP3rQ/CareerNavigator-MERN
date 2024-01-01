@@ -11,18 +11,16 @@ export interface IEducation extends Document {
   fieldOfStudy: string;
   from: Date;
   to: Date;
-  current: boolean;
   description: string;
 }
 
 export interface IExperience extends Document {
   title: string;
   company: string;
+  description: string;
   location: string;
   from: Date;
   to: Date;
-  current: boolean;
-  description: string;
 }
 
 export interface IUser extends Document {
@@ -139,10 +137,6 @@ const userSchema: Schema<IUser> = new mongoose.Schema(
         to: {
           type: Date,
         },
-        current: {
-          type: Boolean,
-          default: false,
-        },
         description: {
           type: String,
         },
@@ -164,10 +158,6 @@ const userSchema: Schema<IUser> = new mongoose.Schema(
         },
         to: {
           type: Date,
-        },
-        current: {
-          type: Boolean,
-          default: false,
         },
         description: {
           type: String,
