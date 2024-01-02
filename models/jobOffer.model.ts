@@ -26,7 +26,7 @@ export interface IJobOffer extends Document {
   recruiter: {
     recruiterId: string;
   };
-  jobOfferSkills: Array<{ title: string }>;
+  jobOfferSkills: Array<string>;
   jobOfferApplicants: {
     jobOfferApplicantId: string;
     status: string;
@@ -67,11 +67,11 @@ const jobOfferSchema: Schema<IJobOffer> = new mongoose.Schema(
       logo: {
         url: {
           type: String,
-          required: [true, "Please enter a logo for the company"],
+          // required: [true, "Please enter a logo for the company"],
         },
         public_id: {
           type: String,
-          required: [true, "Please enter a logo for the company"],
+          // required: [true, "Please enter a logo for the company"],
         },
       },
       location: {
@@ -100,14 +100,10 @@ const jobOfferSchema: Schema<IJobOffer> = new mongoose.Schema(
         required: [true, "Please enter a recruiter for the job offer"],
       },
     },
-    jobOfferSkills: [
-      {
-        title: {
-          type: String,
-          required: [true, "Please enter a skill for the job offer"],
-        },
-      },
-    ],
+    jobOfferSkills: {
+      type: [String],
+      required: [true, "Please enter skills for the job offer"],
+    },
     jobOfferApplicants: [
       {
         jobOfferApplicantId: {

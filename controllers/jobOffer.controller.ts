@@ -16,9 +16,18 @@ export const createJobOffer = CatchAsyncError(
         remote,
         company,
         contractType,
-        recruiter,
         jobOfferSkills,
       } = req.body as IJobOffer;
+
+      let recruiter = {};
+      // Check if user is a recruiter
+      if (req.user?.role !== "recruiter") {
+        return next(new ErrorHandler("You are not a recruiter", 403));
+      } else {
+        recruiter = {
+          recruiterId: req.user._id,
+        };
+      }
 
       // Check if all the fields are filled
       if (
@@ -26,11 +35,25 @@ export const createJobOffer = CatchAsyncError(
         !description ||
         !salaryRange ||
         !remote ||
-        !contractType ||
+        !company ||
         !recruiter ||
+        !contractType ||
         !jobOfferSkills
       ) {
         return next(new ErrorHandler("Please fill all the fields", 400));
+      }
+
+      console.log(req.body);
+
+      // upload company logo to cloudinary and fetch the url and public_id
+      if (company.logo.url) {
+        const result = await cloudinary.v2.uploader.upload(company.logo.url, {
+          folder: "company-logos",
+          width: 150,
+          crop: "scale",
+        });
+        company.logo.url = result.secure_url;
+        company.logo.public_id = result.public_id;
       }
 
       const jobOffer = await JobOfferModel.create({
