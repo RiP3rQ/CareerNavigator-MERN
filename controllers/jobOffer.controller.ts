@@ -67,11 +67,12 @@ export const createJobOffer = CatchAsyncError(
         jobOfferSkills,
       });
 
-      res.status(201).json({
+      res.status(200).json({
         success: true,
         jobOffer,
       });
     } catch (error: any) {
+      console.log(error);
       return next(new ErrorHandler(error.message, 500));
     }
   }

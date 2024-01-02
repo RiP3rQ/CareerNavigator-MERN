@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import { ErrorMiddleware } from "./middleware/error";
 import userRouter from "./routes/user.route";
 import jobOfferRouter from "./routes/jobOffer.route";
+import postRouter from "./routes/post.route";
 require("dotenv").config();
 
 // App init
@@ -26,7 +27,7 @@ app.use(
 //// ROUTES -----------------------------------------------------------
 
 // all routes
-app.use("/api/v1", userRouter, jobOfferRouter);
+app.use("/api/v1", userRouter, jobOfferRouter, postRouter);
 
 // unknown route
 app.all("*", (req: Request, res: Response, next: NextFunction) => {
