@@ -152,26 +152,25 @@ export const editJobOffer = CatchAsyncError(
 export const getAllJobOffers = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const isCachedExist = await redis.get("allJobOffers");
-      if (isCachedExist) {
-        const jobOffers = JSON.parse(isCachedExist);
-        return res.status(201).json({
-          success: true,
-          jobOffers,
-        });
-      } else {
-        const jobOffers = await JobOfferModel.find().select(
-          "-jobOfferApplicants"
-        );
+      // const isCachedExist = await redis.get("allJobOffers");
+      // if (isCachedExist) {
+      //   const jobOffers = JSON.parse(isCachedExist);
+      //   return res.status(201).json({
+      //     success: true,
+      //     jobOffers,
+      //   });
+      // } else {
+      const jobOffers = await JobOfferModel.find().select(
+        "-jobOfferApplicants"
+      );
 
-        // set redis cache
-        await redis.set("allJobOffers", JSON.stringify(jobOffers));
+      // set redis cache
+      await redis.set("allJobOffers", JSON.stringify(jobOffers));
 
-        res.status(201).json({
-          success: true,
-          jobOffers,
-        });
-      }
+      res.status(201).json({
+        success: true,
+        jobOffers,
+      });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }

@@ -8,9 +8,7 @@ import PostModel from "../models/post.model";
 export const createComment = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { comment, author, userId } = req.body as any;
-
-      const postId = req.params.postId;
+      const { comment, author, userId, postId } = req.body as any;
 
       if (!comment || !author || !userId || !postId) {
         return next(new ErrorHandler("Please fill all the fields", 400));
@@ -91,6 +89,10 @@ export const getPostComments = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const postId = req.params.postId;
+
+      if (!postId) {
+        return next(new ErrorHandler("Please provide a post id", 400));
+      }
 
       const comments = await CommentModel.find({ postId });
 

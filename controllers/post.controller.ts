@@ -4,6 +4,7 @@ import { CatchAsyncError } from "../middleware/catchAsyncError";
 import PostModel, { IPost } from "../models/post.model";
 import cloudinary from "cloudinary";
 import { redis } from "../utils/redis";
+import CommentModel from "../models/postComment.model";
 
 // ------------------------------------------------------------------------ Create a post
 export const createPost = CatchAsyncError(
@@ -83,15 +84,12 @@ export const editPost = CatchAsyncError(
         return next(new ErrorHandler("Post not found", 404));
       }
 
-      console.log("oldPost", oldPost);
-
       // if postImage contains a url same as the previous one,
       // then don't upload it again
       if (
         image.url !== oldPost.postImage.url &&
         image.public_id !== oldPost.postImage.public_id
       ) {
-        console.log("uploading new image");
         // first delete the previous photo
         await cloudinary.v2.uploader.destroy(oldPost?.postImage?.public_id);
         const myCloud = await cloudinary.v2.uploader.upload(postImage.url, {
@@ -130,11 +128,18 @@ export const editPost = CatchAsyncError(
 export const deletePost = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      if (!req.params.id) {
+      const postId = req.params.id;
+
+      // TODO: better redis cache using
+
+      if (!postId) {
         return next(new ErrorHandler("Please provide a post id", 400));
       }
 
-      await PostModel.findByIdAndDelete(req.params.id);
+      await PostModel.findByIdAndDelete(postId);
+
+      // Delete the comments associated with the post
+      await CommentModel.deleteMany({ postId });
 
       res.status(200).json({
         success: true,
