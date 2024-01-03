@@ -13,8 +13,6 @@ benchmarks/graphs
 # Env
 .env
 
-# TODO: remove this
-todo.txt
 
 
 # ignore additional files using core.excludesFile

@@ -11,8 +11,8 @@ interface ICompany extends Document {
   };
   location: string;
   geoLocation: {
-    lat: number;
-    lng: number;
+    latitude: number;
+    longitude: number;
   };
 }
 
@@ -79,11 +79,11 @@ const jobOfferSchema: Schema<IJobOffer> = new mongoose.Schema(
         required: [true, "Please enter a location for the company"],
       },
       geoLocation: {
-        lat: {
+        latitude: {
           type: Number,
           required: [true, "Please enter a geoLocation for the company"],
         },
-        lng: {
+        longitude: {
           type: Number,
           required: [true, "Please enter a geoLocation for the company"],
         },

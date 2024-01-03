@@ -47,6 +47,9 @@ export const createPost = CatchAsyncError(
 
       const createdPost = await PostModel.create(post);
 
+      // delete redis cache allPosts cache
+      await redis.del("allPosts");
+
       res.status(200).json({
         success: true,
         createdPost,
@@ -114,6 +117,10 @@ export const editPost = CatchAsyncError(
         { new: true }
       );
 
+      // delete from redis cache
+      await redis.del(postId);
+      await redis.del("allPosts");
+
       res.status(201).json({
         success: true,
         editedPost,
@@ -130,16 +137,19 @@ export const deletePost = CatchAsyncError(
     try {
       const postId = req.params.id;
 
-      // TODO: better redis cache using
-
       if (!postId) {
         return next(new ErrorHandler("Please provide a post id", 400));
       }
 
+      // First delete the main post
       await PostModel.findByIdAndDelete(postId);
 
       // Delete the comments associated with the post
       await CommentModel.deleteMany({ postId });
+
+      // delete from redis cache
+      await redis.del(postId);
+      await redis.del("allPosts");
 
       res.status(200).json({
         success: true,
@@ -157,18 +167,32 @@ export const getAllPosts = CatchAsyncError(
     try {
       const { searchFilter } = req.body as any;
 
-      // if searchFilter is provided, search for posts with that title
-      let posts = [];
-      if (searchFilter) {
-        posts = await PostModel.find({
-          title: { $regex: searchFilter, $options: "i" },
-        });
-      } else {
-        posts = await PostModel.find();
+      // if searchFilter is not provided, get all posts from redis cache
+      // check if redis cache exists
+      if (!searchFilter) {
+        const isCachedExist = await redis.get("allPosts");
+        if (isCachedExist) {
+          const posts = JSON.parse(isCachedExist);
+          return res.status(201).json({
+            success: true,
+            posts,
+          });
+        } else {
+          const posts = await PostModel.find();
+          // set redis cache
+          await redis.set("allPosts", JSON.stringify(posts));
+          res.status(201).json({
+            success: true,
+            posts,
+          });
+        }
       }
 
-      // set redis cache
-      await redis.set("allPosts", JSON.stringify(posts));
+      // if searchFilter is provided, search for posts with that title
+      let posts = [];
+      posts = await PostModel.find({
+        title: { $regex: searchFilter, $options: "i" },
+      });
 
       res.status(201).json({
         success: true,
@@ -184,18 +208,28 @@ export const getAllPosts = CatchAsyncError(
 export const getPostById = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      if (!req.params.id) {
+      const postId = req.params.id;
+      if (!postId) {
         return next(new ErrorHandler("Please provide a post id", 400));
       }
 
-      // TODO: better redis cache using
-
-      const post = await PostModel.findById(req.params.id);
-
-      res.status(201).json({
-        success: true,
-        post,
-      });
+      // check if cached in redis
+      const isCachedExist = await redis.get(postId);
+      if (isCachedExist) {
+        const post = JSON.parse(isCachedExist);
+        return res.status(201).json({
+          success: true,
+          post,
+        });
+      } else {
+        const post = await PostModel.findById(postId);
+        // set redis cache
+        await redis.set(postId, JSON.stringify(post));
+        res.status(201).json({
+          success: true,
+          post,
+        });
+      }
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));
     }
