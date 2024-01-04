@@ -4,6 +4,7 @@ import { CatchAsyncError } from "../middleware/catchAsyncError";
 import { redis } from "../utils/redis";
 import cloudinary from "cloudinary";
 import JobOfferModel, { IJobOffer } from "../models/jobOffer.model";
+import UserModel from "../models/user.model";
 
 // ------------------------------------------------------------------------ Create a job offer
 export const createJobOffer = CatchAsyncError(
@@ -333,10 +334,6 @@ export const applyToJobOffer = CatchAsyncError(
           applicant.jobOfferApplicantId.toString() === req.user?._id.toString()
       );
 
-      console.log(isApplied);
-      console.log(jobOffer.jobOfferApplicants);
-      console.log(req.user?._id.toString());
-
       if (isApplied) {
         return next(
           new ErrorHandler("You have already applied to this job offer", 400)
@@ -351,11 +348,37 @@ export const applyToJobOffer = CatchAsyncError(
             status: "pending",
           },
         },
+      }).then(async () => {
+        await JobOfferModel.findById(jobOfferId).then(async (newJobOffer) => {
+          await redis.del("allJobOffers");
+          await redis.del(jobOfferId);
+          await redis.set(
+            jobOfferId,
+            JSON.stringify(newJobOffer),
+            "EX",
+            60 * 60 * 24 * 7
+          ); // 7 day cache;
+        });
       });
-
-      // delete from redis cache
-      await redis.del(jobOfferId);
-      await redis.del("allJobOffers");
+      // add aplication to user
+      await UserModel.findByIdAndUpdate(req.user?._id, {
+        $push: {
+          jobsOffersApplied: {
+            jobOfferId: jobOfferId,
+            status: "pending",
+          },
+        },
+      }).then(async () => {
+        await UserModel.findById(req.user?._id).then(async (userNewData) => {
+          await redis.del(req.user?._id);
+          await redis.set(
+            req.user?._id,
+            JSON.stringify(userNewData),
+            "EX",
+            60 * 60 * 24 * 7
+          ); // 7 day cache;
+        });
+      });
 
       res.status(201).json({
         success: true,
