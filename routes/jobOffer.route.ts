@@ -8,6 +8,7 @@ import {
   editJobOffer,
   filterJobOffersBySkills,
   filterJobOffersByTitle,
+  getAllAppliedToJobOffersByUser,
   getAllFavoritedJobOffersByUser,
   getAllJobOffers,
   getAllJobOffersOfARecruiter,
@@ -52,6 +53,11 @@ jobOfferRouter.get(
   "/get-all-favorited-job-offers-by-user/:id",
   isAuthenticated,
   getAllFavoritedJobOffersByUser
+);
+jobOfferRouter.get(
+  "/get-all-applied-to-job-offers-by-user/:id",
+  isAuthenticated,
+  getAllAppliedToJobOffersByUser
 );
 
 // ------------------------------------ DELETE Routes ------------------------------------

@@ -567,3 +567,59 @@ export const getAllFavoritedJobOffersByUser = CatchAsyncError(
     }
   }
 );
+
+// ------------------------------------------------------------------------ Get all applied to job offers by user
+export const getAllAppliedToJobOffersByUser = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.params.id;
+
+      const isUserCachedExist = await redis.get(userId);
+
+      if (isUserCachedExist) {
+        const user = JSON.parse(isUserCachedExist);
+        const appliedJobOffers = user.jobsOffersApplied;
+
+        const jobOffers = await JobOfferModel.find({
+          _id: {
+            $in: appliedJobOffers.map((jobOffer: any) => jobOffer.jobOfferId),
+          },
+        });
+
+        return res.status(201).json({
+          success: true,
+          jobOffers,
+        });
+      } else {
+        const user = await UserModel.findById(userId);
+
+        if (!user) {
+          return next(new ErrorHandler("User not found", 404));
+        }
+        const appliedJobOffers = user.jobsOffersApplied;
+
+        const jobOffers = await JobOfferModel.find({
+          _id: {
+            $in: appliedJobOffers.map((jobOffer: any) => jobOffer.jobOfferId),
+          },
+        });
+
+        // send jobOffers to frontend but without other applicants BUT STILL with proper status from database
+        jobOffers.forEach((jobOffer) => {
+          jobOffer.jobOfferApplicants = jobOffer.jobOfferApplicants.filter(
+            (applicant) =>
+              applicant.jobOfferApplicantId.toString() ===
+              req.user?._id.toString()
+          );
+        });
+
+        res.status(201).json({
+          success: true,
+          jobOffers,
+        });
+      }
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
+);
