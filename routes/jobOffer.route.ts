@@ -1,12 +1,14 @@
 import express from "express";
 import { isAuthenticated } from "../middleware/auth";
 import {
+  addToFavoritesJobOffers,
   applyToJobOffer,
   createJobOffer,
   deleteJobOffer,
   editJobOffer,
   filterJobOffersBySkills,
   filterJobOffersByTitle,
+  getAllFavoritedJobOffersByUser,
   getAllJobOffers,
   getAllJobOffersOfARecruiter,
   getSingleJobOffer,
@@ -24,6 +26,11 @@ jobOfferRouter.post(
 
 // ------------------------------------ PUT Routes ------------------------------------
 jobOfferRouter.put("/edit-job-offer/:id", isAuthenticated, editJobOffer);
+jobOfferRouter.put(
+  "/add-to-favorites-job-offers/:id",
+  isAuthenticated,
+  addToFavoritesJobOffers
+);
 
 // ------------------------------------ GET Routes ------------------------------------
 jobOfferRouter.get("/get-all-job-offers", getAllJobOffers);
@@ -40,6 +47,11 @@ jobOfferRouter.get(
 jobOfferRouter.get(
   "/filter-all-job-offer-by-title/:title",
   filterJobOffersByTitle
+);
+jobOfferRouter.get(
+  "/get-all-favorited-job-offers-by-user/:id",
+  isAuthenticated,
+  getAllFavoritedJobOffersByUser
 );
 
 // ------------------------------------ DELETE Routes ------------------------------------

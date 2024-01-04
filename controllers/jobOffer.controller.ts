@@ -437,3 +437,133 @@ export const filterJobOffersByTitle = CatchAsyncError(
     }
   }
 );
+
+// ------------------------------------------------------------------------ Add to favorites job offers
+export const addToFavoritesJobOffers = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const jobOfferId = req.params.id;
+      const userId = req.user?._id;
+
+      const jobOffer = await JobOfferModel.findById(jobOfferId);
+
+      if (!jobOffer) {
+        return next(new ErrorHandler("Job offer not found", 404));
+      }
+
+      const user = await UserModel.findById(userId);
+
+      // Check if user has already applied to this job offer
+      const isFavorite = user?.jobsOffersFavorites.find(
+        (userFavorite) =>
+          userFavorite.jobOfferId.toString() === jobOfferId.toString()
+      );
+
+      if (isFavorite) {
+        // delete job offer from user favorites
+        await UserModel.findByIdAndUpdate(req.user?._id, {
+          $pull: {
+            jobsOffersFavorites: {
+              jobOfferId: jobOfferId,
+            },
+          },
+        }).then(async () => {
+          await UserModel.findById(req.user?._id).then(async (userNewData) => {
+            await redis.del(req.user?._id);
+            await redis.set(
+              req.user?._id,
+              JSON.stringify(userNewData),
+              "EX",
+              60 * 60 * 24 * 7
+            ); // 7 day cache;
+          });
+        });
+        res.status(201).json({
+          success: true,
+          message: "Deleted from favorites successfully",
+          favourited: false,
+        });
+      } else {
+        // add job offer to user favorites
+        await UserModel.findByIdAndUpdate(req.user?._id, {
+          $push: {
+            jobsOffersFavorites: {
+              jobOfferId: jobOfferId,
+            },
+          },
+        }).then(async () => {
+          await UserModel.findById(req.user?._id).then(async (userNewData) => {
+            await redis.del(req.user?._id);
+            await redis.set(
+              req.user?._id,
+              JSON.stringify(userNewData),
+              "EX",
+              60 * 60 * 24 * 7
+            ); // 7 day cache;
+          });
+        });
+
+        res.status(201).json({
+          success: true,
+          message: "Added to favorites successfully",
+          favourited: true,
+        });
+      }
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
+);
+
+// ------------------------------------------------------------------------ Get all favorited job offers by user
+export const getAllFavoritedJobOffersByUser = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.params.id;
+
+      const isUserCachedExist = await redis.get(userId);
+
+      if (isUserCachedExist) {
+        const user = JSON.parse(isUserCachedExist);
+        const FavouritedJobOffers = user.jobsOffersFavorites;
+
+        const jobOffers = await JobOfferModel.find({
+          _id: {
+            $in: FavouritedJobOffers.map(
+              (jobOffer: any) => jobOffer.jobOfferId
+            ),
+          },
+        });
+
+        console.log(jobOffers);
+
+        return res.status(201).json({
+          success: true,
+          jobOffers,
+        });
+      } else {
+        const user = await UserModel.findById(userId);
+
+        if (!user) {
+          return next(new ErrorHandler("User not found", 404));
+        }
+        const FavouritedJobOffers = user.jobsOffersFavorites;
+
+        const jobOffers = await JobOfferModel.find({
+          _id: {
+            $in: FavouritedJobOffers.map(
+              (jobOffer: any) => jobOffer.jobOfferId
+            ),
+          },
+        });
+
+        res.status(201).json({
+          success: true,
+          jobOffers,
+        });
+      }
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
+);

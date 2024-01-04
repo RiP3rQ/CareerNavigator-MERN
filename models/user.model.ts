@@ -39,6 +39,7 @@ export interface IUser extends Document {
     jobOfferId: string;
     status: string;
   }[];
+  jobsOffersFavorites: Array<{ jobOfferId: string }>;
   // ------- Aditional Info -------
   education: IEducation[];
   experience: IExperience[];
@@ -116,6 +117,14 @@ const userSchema: Schema<IUser> = new mongoose.Schema(
         status: {
           type: String,
           default: "Pending",
+        },
+      },
+    ],
+    jobsOffersFavorites: [
+      {
+        jobOfferId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "JobOffer",
         },
       },
     ],
