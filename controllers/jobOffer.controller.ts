@@ -83,7 +83,7 @@ export const createJobOffer = CatchAsyncError(
     }
   }
 );
-
+// TODO: check if user is a recruiter or admin
 // ------------------------------------------------------------------------ Edit a job offer
 export const editJobOffer = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -95,22 +95,20 @@ export const editJobOffer = CatchAsyncError(
         remote,
         company,
         contractType,
-        recruiter,
         jobOfferSkills,
       } = req.body as IJobOffer;
 
       // Check if user is the creator of the job offer
       const jobOfferOld = await JobOfferModel.findById(req.params.id);
 
-      if (
-        jobOfferOld?.recruiter.recruiterId.toString() !==
-          req.user?._id.toString() &&
-        req.user?.role !== "admin"
-      ) {
-        return next(
-          new ErrorHandler("You are not authorized to edit this job offer", 403)
-        );
+      // check if old job offer exists
+      if (!jobOfferOld) {
+        return next(new ErrorHandler("Job offer not found", 404));
       }
+
+      const recruiter = {
+        recruiterId: req.user?._id,
+      };
 
       // Check if all the fields are filled
       if (
@@ -123,6 +121,25 @@ export const editJobOffer = CatchAsyncError(
         !jobOfferSkills
       ) {
         return next(new ErrorHandler("Please fill all the fields", 400));
+      }
+
+      // if Company logo contains a url same as the previous one,
+      // then don't upload it again
+      if (
+        company.logo.url !== jobOfferOld?.company.logo?.url &&
+        company.logo.public_id !== jobOfferOld?.company.logo.public_id
+      ) {
+        // first delete the previous photo
+        await cloudinary.v2.uploader.destroy(
+          jobOfferOld.company.logo.public_id
+        );
+        const myCloud = await cloudinary.v2.uploader.upload(company.logo.url, {
+          folder: "company-logos",
+          width: 150,
+          crop: "scale",
+        });
+        company.logo.url = myCloud.secure_url;
+        company.logo.public_id = myCloud.public_id;
       }
 
       const data = {
@@ -213,9 +230,8 @@ export const getAllJobOffers = CatchAsyncError(
           jobOffers,
         });
       } else {
-        const jobOffers = await JobOfferModel.find().select(
-          "-jobOfferApplicants"
-        );
+        // get all job offers and sort them by createdAt
+        const jobOffers = await JobOfferModel.find().sort("-createdAt");
 
         // set redis cache
         await redis.set("allJobOffers", JSON.stringify(jobOffers));
@@ -247,9 +263,7 @@ export const getSingleJobOffer = CatchAsyncError(
           jobOffer,
         });
       } else {
-        const jobOffer = await JobOfferModel.findById(jobOfferId).select(
-          "-jobOfferApplicants"
-        );
+        const jobOffer = await JobOfferModel.findById(jobOfferId);
 
         if (!jobOffer) {
           return next(new ErrorHandler("Job offer not found", 404));
@@ -274,11 +288,38 @@ export const getSingleJobOffer = CatchAsyncError(
   }
 );
 
+// ------------------------------------------------------------------------ Get all job offers of a recruiter
+export const getAllJobOffersOfARecruiter = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // TODO: better redis caching
+      const recruiterId = req.params.id;
+
+      const jobOffers = await JobOfferModel.find({
+        "recruiter.recruiterId": recruiterId,
+      });
+
+      if (!jobOffers) {
+        return next(new ErrorHandler("Job offers not found", 404));
+      }
+
+      res.status(201).json({
+        success: true,
+        jobOffers,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
+);
+
 // ------------------------------------------------------------------------ Apply to a job offer
 export const applyToJobOffer = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const jobOfferId = req.params.id;
+
+      console.log(jobOfferId);
 
       const jobOffer = await JobOfferModel.findById(jobOfferId);
 
@@ -292,6 +333,10 @@ export const applyToJobOffer = CatchAsyncError(
           applicant.jobOfferApplicantId.toString() === req.user?._id.toString()
       );
 
+      console.log(isApplied);
+      console.log(jobOffer.jobOfferApplicants);
+      console.log(req.user?._id.toString());
+
       if (isApplied) {
         return next(
           new ErrorHandler("You have already applied to this job offer", 400)
@@ -302,11 +347,15 @@ export const applyToJobOffer = CatchAsyncError(
       await JobOfferModel.findByIdAndUpdate(jobOfferId, {
         $push: {
           jobOfferApplicants: {
-            applicantId: req.user?._id,
+            jobOfferApplicantId: req.user?._id,
             status: "pending",
           },
         },
       });
+
+      // delete from redis cache
+      await redis.del(jobOfferId);
+      await redis.del("allJobOffers");
 
       res.status(201).json({
         success: true,
