@@ -30,7 +30,8 @@ Klient:
 
 ## Environment Variables
 
-To run this project, you will need to add the following environment variables to your .env file
+SERVER:
+
 
 `PORT` = 8000
 
@@ -68,8 +69,11 @@ To run this project, you will need to add the following environment variables to
 
 `REFRESH_TOKEN_EXPIRY` = 3
 
+CLIENT:
 
+`NEXT_PUBLIC_SERVER_URL` = "http://localhost:8000/api/v1/"
 
+`NEXT_PUBLIC_PUBLIC_URL` = "http://localhost:3000"
 ## Installation
 
 Install CareerNavigator with npm
