@@ -14,6 +14,7 @@ import {
   deleteUser,
   updateUserAdditionalInfo,
   deleteSectionUserProfileAdditionalInfo,
+  getUserPublicProfile,
 } from "../controllers/user.controller";
 import express from "express";
 import { authorizeRoles, isAuthenticated } from "../middleware/auth";
@@ -24,6 +25,7 @@ const userRouter = express.Router();
 userRouter.get("/logout", isAuthenticated, logoutUser);
 userRouter.get("/refresh-token", updateAccessToken);
 userRouter.get("/me", isAuthenticated, getUserInfo);
+userRouter.get("/get-public-profile/:id", getUserPublicProfile);
 
 // ------------------------------------ POST Routes ------------------------------------
 userRouter.post("/registration", registrationUser);

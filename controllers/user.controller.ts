@@ -730,3 +730,29 @@ export const deleteUser = CatchAsyncError(
     }
   }
 );
+
+// ------------------------------------------------------------------------ Get Users public profile data by id
+export const getUserPublicProfile = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.params.id;
+
+      console.log(userId);
+
+      // Check if user exists
+      const user = await UserModel.findById(userId).select(
+        "-password -role -isVerified -jobsOffersCreated -jobsOffersApplied -jobsOffersFavorites -createdAt -updatedAt -__v"
+      );
+      if (!user) return next(new ErrorHandler("User not found", 404));
+
+      console.log(user);
+
+      res.status(201).json({
+        success: true,
+        user,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 400));
+    }
+  }
+);
