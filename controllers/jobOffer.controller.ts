@@ -623,3 +623,54 @@ export const getAllAppliedToJobOffersByUser = CatchAsyncError(
     }
   }
 );
+
+// ------------------------------------------------------------------------ Get all applicants of a job offer
+export const getAllApplicantsOfAJobOffer = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const jobOfferId = req.params.id;
+
+      const jobOffer = await JobOfferModel.findById(jobOfferId);
+
+      if (!jobOffer) {
+        return next(new ErrorHandler("Job offer not found", 404));
+      }
+
+      const applicants = jobOffer.jobOfferApplicants;
+
+      // using applicantsId form applicants array, get basic user info like name, email, avatar, bio, socials and send it with status from applicants array
+      const applicantsId = applicants.map(
+        (applicant: any) => applicant.jobOfferApplicantId
+      );
+
+      const users = await UserModel.find({
+        _id: {
+          $in: applicantsId,
+        },
+      });
+
+      const applicantsWithUserInfo = users.map((user) => {
+        const applicant = applicants.find(
+          (applicant: any) =>
+            applicant.jobOfferApplicantId.toString() === user._id.toString()
+        );
+        return {
+          status: applicant?.status,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          avatar: user.avatar,
+          bio: user.bio,
+          social: user.social,
+        };
+      });
+
+      res.status(201).json({
+        success: true,
+        applicantsWithUserInfo,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
+);
