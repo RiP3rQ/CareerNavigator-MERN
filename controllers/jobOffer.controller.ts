@@ -84,7 +84,6 @@ export const createJobOffer = CatchAsyncError(
     }
   }
 );
-// TODO: check if user is a recruiter or admin
 // ------------------------------------------------------------------------ Edit a job offer
 export const editJobOffer = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -202,7 +201,43 @@ export const deleteJobOffer = CatchAsyncError(
         );
       }
 
-      // delete from database
+      // delete all applicants from users who applied to this job offer
+      const applicantsId = jobOffer.jobOfferApplicants.map(
+        (applicant: any) => applicant.jobOfferApplicantId
+      );
+
+      await UserModel.updateMany(
+        {
+          _id: {
+            $in: applicantsId,
+          },
+        },
+        {
+          $pull: {
+            jobsOffersApplied: {
+              jobOfferId: jobOfferId,
+            },
+          },
+        }
+      ).then(async () => {
+        await UserModel.find({
+          _id: {
+            $in: applicantsId,
+          },
+        }).then(async (users) => {
+          users.forEach(async (user) => {
+            await redis.del(user._id);
+            await redis.set(
+              user._id,
+              JSON.stringify(user),
+              "EX",
+              60 * 60 * 24 * 7
+            ); // 7 day cache;
+          });
+        });
+      });
+
+      // delete job offer from database
       await JobOfferModel.findByIdAndDelete(jobOfferId);
 
       // delete from redis cache
@@ -293,7 +328,6 @@ export const getSingleJobOffer = CatchAsyncError(
 export const getAllJobOffersOfARecruiter = CatchAsyncError(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // TODO: better redis caching
       const recruiterId = req.params.id;
 
       const jobOffers = await JobOfferModel.find({
