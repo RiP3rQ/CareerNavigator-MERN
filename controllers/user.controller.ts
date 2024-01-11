@@ -313,7 +313,10 @@ export const socialAuth = CatchAsyncError(
           firstName,
           lastName,
           email,
-          avatar,
+          avatar: {
+            public_id: "Google_avatar",
+            url: avatar,
+          },
         });
 
         // send token
