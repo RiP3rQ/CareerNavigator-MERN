@@ -656,6 +656,7 @@ export const getAllApplicantsOfAJobOffer = CatchAsyncError(
         );
         return {
           status: applicant?.status,
+          id: user._id,
           firstName: user.firstName,
           lastName: user.lastName,
           email: user.email,
@@ -668,6 +669,100 @@ export const getAllApplicantsOfAJobOffer = CatchAsyncError(
       res.status(201).json({
         success: true,
         applicantsWithUserInfo,
+      });
+    } catch (error: any) {
+      return next(new ErrorHandler(error.message, 500));
+    }
+  }
+);
+
+// ------------------------------------------------------------------------ Recruiter click on applicant
+export const recruiterClickOnApplicant = CatchAsyncError(
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const jobOfferId = req.params.id;
+      const { applicantId } = req.body;
+
+      const jobOffer = await JobOfferModel.findById(jobOfferId);
+
+      if (!jobOffer) {
+        return next(new ErrorHandler("Job offer not found", 404));
+      }
+
+      // Check if user is the creator of the job offer
+      if (
+        jobOffer?.recruiter.recruiterId.toString() !==
+          req.user?._id.toString() &&
+        req.user?.role !== "admin"
+      ) {
+        return next(
+          new ErrorHandler(
+            "You are not authorized to click on this applicant",
+            403
+          )
+        );
+      }
+
+      // Check if applicant exists
+      const applicant = jobOffer.jobOfferApplicants.find(
+        (applicant) =>
+          applicant.jobOfferApplicantId.toString() === applicantId.toString()
+      );
+
+      if (!applicant) {
+        return next(new ErrorHandler("Applicant not found", 404));
+      }
+
+      // update applicant status
+      await JobOfferModel.findOneAndUpdate(
+        {
+          _id: jobOfferId,
+          "jobOfferApplicants.jobOfferApplicantId": applicantId,
+        },
+        {
+          $set: {
+            "jobOfferApplicants.$.status": "opened",
+          },
+        }
+      ).then(async () => {
+        await JobOfferModel.findById(jobOfferId).then(async (newJobOffer) => {
+          await redis.del("allJobOffers");
+          await redis.del(jobOfferId);
+          await redis.set(
+            jobOfferId,
+            JSON.stringify(newJobOffer),
+            "EX",
+            60 * 60 * 24 * 7
+          ); // 7 day cache;
+        });
+      });
+
+      // update user status
+      await UserModel.findOneAndUpdate(
+        {
+          _id: applicantId,
+          "jobsOffersApplied.jobOfferId": jobOfferId,
+        },
+        {
+          $set: {
+            "jobsOffersApplied.$.status": "opened",
+          },
+        }
+      ).then(async () => {
+        await UserModel.findById(applicantId).then(async (userNewData) => {
+          await redis.del(applicantId);
+          await redis.set(
+            applicantId,
+            JSON.stringify(userNewData),
+            "EX",
+            60 * 60 * 24 * 7
+          ); // 7 day cache;
+        });
+      });
+
+      res.status(201).json({
+        success: true,
+        message: "Applicant status updated successfully",
       });
     } catch (error: any) {
       return next(new ErrorHandler(error.message, 500));

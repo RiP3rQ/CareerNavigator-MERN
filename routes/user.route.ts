@@ -18,7 +18,6 @@ import {
 } from "../controllers/user.controller";
 import express from "express";
 import { authorizeRoles, isAuthenticated } from "../middleware/auth";
-import { getAllApplicantsOfAJobOffer } from "../controllers/jobOffer.controller";
 
 const userRouter = express.Router();
 
@@ -27,11 +26,6 @@ userRouter.get("/logout", isAuthenticated, logoutUser);
 userRouter.get("/refresh-token", updateAccessToken);
 userRouter.get("/me", isAuthenticated, getUserInfo);
 userRouter.get("/get-public-profile/:id", getUserPublicProfile);
-userRouter.get(
-  "/get-all-applicants-of-a-job-offer/:id",
-  isAuthenticated,
-  getAllApplicantsOfAJobOffer
-);
 
 // ------------------------------------ POST Routes ------------------------------------
 userRouter.post("/registration", registrationUser);

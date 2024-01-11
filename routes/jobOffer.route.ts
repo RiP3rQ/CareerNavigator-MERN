@@ -8,11 +8,13 @@ import {
   editJobOffer,
   filterJobOffersBySkills,
   filterJobOffersByTitle,
+  getAllApplicantsOfAJobOffer,
   getAllAppliedToJobOffersByUser,
   getAllFavoritedJobOffersByUser,
   getAllJobOffers,
   getAllJobOffersOfARecruiter,
   getSingleJobOffer,
+  recruiterClickOnApplicant,
 } from "../controllers/jobOffer.controller";
 
 const jobOfferRouter = express.Router();
@@ -31,6 +33,11 @@ jobOfferRouter.put(
   "/add-to-favorites-job-offers/:id",
   isAuthenticated,
   addToFavoritesJobOffers
+);
+jobOfferRouter.put(
+  "/recruiter-click-on-applicant/:id",
+  isAuthenticated,
+  recruiterClickOnApplicant
 );
 
 // ------------------------------------ GET Routes ------------------------------------
@@ -58,6 +65,11 @@ jobOfferRouter.get(
   "/get-all-applied-to-job-offers-by-user/:id",
   isAuthenticated,
   getAllAppliedToJobOffersByUser
+);
+jobOfferRouter.get(
+  "/get-all-applicants-of-a-job-offer/:id",
+  isAuthenticated,
+  getAllApplicantsOfAJobOffer
 );
 
 // ------------------------------------ DELETE Routes ------------------------------------
